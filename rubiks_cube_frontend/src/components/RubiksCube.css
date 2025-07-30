@@ -1,0 +1,525 @@
+/* Main container styles */
+.rubiks-app {
+    display: flex;
+    height: 100vh;
+    background: #1a1a1a;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    overflow: hidden;
+}
+
+.cube-container {
+    flex: 1;
+    position: relative;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    min-height: 100vh;
+}
+
+/* Control Sidebar Styles */
+.control-sidebar {
+    width: 350px;
+    background: #2d2d2d;
+    border-left: 1px solid #404040;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.control-sidebar.collapsed {
+    width: 50px;
+}
+
+.collapse-toggle {
+    position: absolute;
+    top: 20px;
+    left: -25px;
+    width: 50px;
+    height: 30px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 15px 0 0 15px;
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.collapse-toggle:hover {
+    background: #1565c0;
+    transform: translateX(-2px);
+}
+
+.sidebar-content {
+    padding: 20px;
+}
+
+/* Section Styles */
+.sidebar-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #404040;
+}
+
+.sidebar-section:last-child {
+    border-bottom: none;
+}
+
+.sidebar-section h2 {
+    margin: 0 0 15px 0;
+    color: #1976d2;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.sidebar-section h3 {
+    margin: 0 0 15px 0;
+    color: #64b5f6;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Form Controls */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    background: #404040;
+    border: 1px solid #606060;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+.form-control:hover {
+    border-color: #64b5f6;
+}
+
+/* Slider Styles */
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: #404040;
+    border-radius: 3px;
+    outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #1976d2;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+    background: #1565c0;
+    transform: scale(1.1);
+}
+
+.slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #1976d2;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.slider-value {
+    display: inline-block;
+    margin-left: 10px;
+    font-weight: 500;
+    color: #64b5f6;
+}
+
+/* Input Group */
+.input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.input-group .form-control {
+    flex: 1;
+}
+
+/* Button Styles */
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: #1976d2;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1565c0;
+}
+
+.btn-success {
+    background: #4caf50;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #45a049;
+}
+
+.btn-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+}
+
+.btn-secondary {
+    background: #606060;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #505050;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-height: 30px;
+}
+
+/* Button Groups */
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.button-group .btn {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Move Buttons */
+.move-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.btn-move {
+    background: #404040;
+    color: #ffffff;
+    border: 1px solid #606060;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 14px;
+    min-height: 40px;
+    transition: all 0.3s ease;
+}
+
+.btn-move:hover {
+    background: #1976d2;
+    border-color: #1976d2;
+    transform: translateY(-2px);
+}
+
+/* Move History */
+.move-history {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #404040;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.history-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.history-move {
+    background: #606060;
+    color: #ffffff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.history-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Checkbox Styles */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    background: #404040;
+    border: 2px solid #606060;
+    border-radius: 3px;
+    margin-right: 10px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background: #1976d2;
+    border-color: #1976d2;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Debug Info */
+.debug-info {
+    background: #404040;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.debug-info p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+/* Help Content */
+.help-content {
+    font-size: 14px;
+}
+
+.notation-help ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.notation-help li {
+    margin: 5px 0;
+}
+
+.notation-help code {
+    background: #404040;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    color: #64b5f6;
+}
+
+/* Text Utilities */
+.text-muted {
+    color: #909090;
+    font-style: italic;
+}
+
+/* Scrollbar Styles */
+.control-sidebar::-webkit-scrollbar,
+.move-history::-webkit-scrollbar {
+    width: 8px;
+}
+
+.control-sidebar::-webkit-scrollbar-track,
+.move-history::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+.control-sidebar::-webkit-scrollbar-thumb,
+.move-history::-webkit-scrollbar-thumb {
+    background: #606060;
+    border-radius: 4px;
+}
+
+.control-sidebar::-webkit-scrollbar-thumb:hover,
+.move-history::-webkit-scrollbar-thumb:hover {
+    background: #707070;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .rubiks-app {
+        flex-direction: column;
+    }
+    
+    .control-sidebar {
+        width: 100%;
+        height: 40vh;
+        border-left: none;
+        border-top: 1px solid #404040;
+    }
+    
+    .control-sidebar.collapsed {
+        height: 60px;
+        width: 100%;
+    }
+    
+    .collapse-toggle {
+        top: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 15px 15px 0 0;
+        width: 60px;
+    }
+    
+    .cube-container {
+        flex: 1;
+        height: 60vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar-content {
+        padding: 15px;
+    }
+    
+    .move-buttons {
+        grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+        gap: 6px;
+    }
+    
+    .btn-move {
+        min-height: 35px;
+        font-size: 12px;
+        padding: 8px;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .button-group .btn {
+        flex: none;
+    }
+}
+
+/* Loading and Animation States */
+.cube-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    flex-direction: column;
+    color: #64b5f6;
+}
+
+.cube-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #404040;
+    border-top: 4px solid #1976d2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Accessibility */
+.btn:focus {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+}
+
+.form-control:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .control-sidebar {
+        border-left-color: #ffffff;
+    }
+    
+    .sidebar-section {
+        border-bottom-color: #ffffff;
+    }
+    
+    .form-control {
+        border-color: #ffffff;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
