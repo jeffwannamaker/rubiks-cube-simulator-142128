@@ -1,26 +1,60 @@
 {
-  "name": "react-kavia",
-  "version": "0.1.0",
+  "name": "rubiks-cube-simulator",
+  "version": "1.0.0",
+  "description": "A responsive, interactive, and realistic Rubik's Cube simulator built in React JS with 3D rendering using Three.js",
+  "keywords": [
+    "rubiks-cube",
+    "3d",
+    "threejs",
+    "react",
+    "puzzle",
+    "simulator",
+    "cube",
+    "ai-solver"
+  ],
+  "author": "Kavia Code Generation Agent",
+  "license": "MIT",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "^5.0.1"
+    "react-scripts": "^5.0.1",
+    "three": "^0.169.0"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "test:ci": "CI=true react-scripts test --coverage --watchAll=false",
+    "eject": "react-scripts eject",
+    "lint": "eslint src/ --ext .js,.jsx",
+    "lint:fix": "eslint src/ --ext .js,.jsx --fix",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}",
+    "analyze": "npm run build && npx serve -s build",
+    "serve": "serve -s build -l 3000"
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "rules": {
+      "no-unused-vars": [
+        "error",
+        {
+          "varsIgnorePattern": "React|THREE"
+        }
+      ]
+    }
   },
   "browserslist": {
     "production": [
       ">0.2%",
       "not dead",
-      "not op_mini all"
+      "not op_mini all",
+      "not ie <= 11"
     ],
     "development": [
       "last 1 chrome version",
@@ -29,6 +63,39 @@
     ]
   },
   "devDependencies": {
-    "cross-env": "^7.0.3"
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "cross-env": "^7.0.3",
+    "prettier": "^2.8.0",
+    "serve": "^14.0.0"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/components/**/*.{js,jsx}",
+      "src/utils/**/*.{js,jsx}",
+      "!src/components/**/*.test.{js,jsx}",
+      "!src/index.js",
+      "!src/setupTests.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 70,
+        "lines": 70,
+        "statements": 70
+      }
+    }
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kavia/rubiks-cube-simulator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kavia/rubiks-cube-simulator/issues"
   }
 }
