@@ -1,1 +1,3 @@
-# rubiks-cube-simulator-142128
+# Project Repository
+
+This is the initial README file for the project.
