@@ -322,10 +322,44 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
     const cubeLogicRef = useRef(null);
 
     const [isInitialized, setIsInitialized] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // Initialize Three.js scene
     useEffect(() => {
+        // Early return if already initialized or no mount point
         if (!mountRef.current || isInitialized) return;
+
+        let animationId = null;
+        const currentMount = mountRef.current;
+        
+        setIsLoading(true);
+        setError(null);
+
+        // Scene initialization function
+        const initScene = () => {
+            // Validate mount point
+            if (!currentMount.parentElement) {
+                console.warn('Mount element not in DOM, retrying...');
+                setTimeout(initScene, 100);
+                return;
+            };
+
+            const rect = currentMount.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                console.warn('Mount element has no dimensions, retrying...', rect);
+                setTimeout(initScene, 100);
+                return;
+            };
+
+                const rect = currentMount.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) {
+                    console.warn('Mount element has no dimensions, retrying...', rect);
+                    setTimeout(setupScene, 100);
+                    return;
+                }
+
+                console.log('Initializing Three.js scene with dimensions:', rect.width, 'x', rect.height);
 
         // Scene setup
         const scene = new THREE.Scene();
@@ -335,7 +369,7 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         // Camera setup
         const camera = new THREE.PerspectiveCamera(
             75,
-            mountRef.current.clientWidth / mountRef.current.clientHeight,
+            currentMount.clientWidth / currentMount.clientHeight,
             0.1,
             1000
         );
@@ -344,10 +378,16 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         cameraRef.current = camera;
 
         // Renderer setup
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            alpha: false,
+            preserveDrawingBuffer: false
+        });
+        renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
         rendererRef.current = renderer;
 
         // Lighting
@@ -357,13 +397,17 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(10, 10, 5);
         directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
         scene.add(directionalLight);
 
         // Cube logic
         cubeLogicRef.current = new RubiksCubeLogic(cubeSize);
         
         // Add cubelets to scene
-        cubeLogicRef.current.getCubelets().forEach(cubelet => {
+        const cubelets = cubeLogicRef.current.getCubelets();
+        console.log(`Adding ${cubelets.length} cubelets to scene`);
+        cubelets.forEach(cubelet => {
             scene.add(cubelet.mesh);
         });
 
@@ -372,12 +416,14 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         let previousMousePosition = { x: 0, y: 0 };
 
         const onMouseDown = (event) => {
+            event.preventDefault();
             isDragging = true;
             previousMousePosition = { x: event.clientX, y: event.clientY };
         };
 
         const onMouseMove = (event) => {
             if (!isDragging) return;
+            event.preventDefault();
 
             const deltaMove = {
                 x: event.clientX - previousMousePosition.x,
@@ -398,51 +444,127 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
             previousMousePosition = { x: event.clientX, y: event.clientY };
         };
 
-        const onMouseUp = () => {
+        const onMouseUp = (event) => {
+            event.preventDefault();
             isDragging = false;
+        };
+
+        const onWheel = (event) => {
+            event.preventDefault();
+            const delta = event.deltaY;
+            const scaleFactor = 1 + delta * 0.001;
+            camera.position.multiplyScalar(scaleFactor);
         };
 
         const toRadians = (angle) => angle * (Math.PI / 180);
 
-        renderer.domElement.addEventListener('mousedown', onMouseDown);
-        renderer.domElement.addEventListener('mousemove', onMouseMove);
-        renderer.domElement.addEventListener('mouseup', onMouseUp);
+        // Add event listeners with proper options
+        renderer.domElement.addEventListener('mousedown', onMouseDown, { passive: false });
+        renderer.domElement.addEventListener('mousemove', onMouseMove, { passive: false });
+        renderer.domElement.addEventListener('mouseup', onMouseUp, { passive: false });
+        renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+
+        // Prevent context menu on right click
+        renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Mount renderer
-        const currentMount = mountRef.current;
         currentMount.appendChild(renderer.domElement);
 
-        // Animation loop
-        const animate = () => {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        };
-        animate();
+                // Animation loop
+                const animate = () => {
+                    animationId = requestAnimationFrame(animate);
+                    if (rendererRef.current && cameraRef.current && sceneRef.current) {
+                        rendererRef.current.render(sceneRef.current, cameraRef.current);
+                    }
+                };
+                animate();
 
-        // Handle window resize
-        const handleResize = () => {
-            if (!mountRef.current) return;
-            camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-        };
+                // Handle window resize
+                const handleResize = () => {
+                    if (!currentMount || !rendererRef.current || !cameraRef.current) return;
+                    const width = currentMount.clientWidth;
+                    const height = currentMount.clientHeight;
+                    cameraRef.current.aspect = width / height;
+                    cameraRef.current.updateProjectionMatrix();
+                    rendererRef.current.setSize(width, height);
+                };
 
-        window.addEventListener('resize', handleResize);
+                window.addEventListener('resize', handleResize);
+                
+                // Return true to indicate successful initialization
+                return true;
 
-        setIsInitialized(true);
+            console.log('Three.js scene initialized successfully');
+            setIsInitialized(true);
+            setIsLoading(false);
 
-        // Cleanup
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            renderer.domElement.removeEventListener('mousedown', onMouseDown);
-            renderer.domElement.removeEventListener('mousemove', onMouseMove);
-            renderer.domElement.removeEventListener('mouseup', onMouseUp);
-            
-            if (currentMount && renderer.domElement && currentMount.contains(renderer.domElement)) {
-                currentMount.removeChild(renderer.domElement);
+        } catch (err) {
+            console.error('Failed to initialize Three.js scene:', err);
+            setError(err.message);
+            setIsLoading(false);
+        }
+
+        // Define cleanup function
+        const cleanup = () => {
+            // Stop animation
+            if (animationId !== null) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
             }
-            renderer.dispose();
+
+            // Remove event listeners
+            window.removeEventListener('resize', handleResize);
+
+            // Get current refs for cleanup
+            const renderer = rendererRef.current;
+            const scene = sceneRef.current;
+
+            // Clean up renderer and event listeners
+            if (renderer) {
+                const domElement = renderer.domElement;
+                if (domElement) {
+                    domElement.removeEventListener('mousedown', onMouseDown);
+                    domElement.removeEventListener('mousemove', onMouseMove);
+                    domElement.removeEventListener('mouseup', onMouseUp);
+                    domElement.removeEventListener('wheel', onWheel);
+                    domElement.removeEventListener('contextmenu', (e) => e.preventDefault());
+
+                    // Remove from DOM
+                    if (currentMount.contains(domElement)) {
+                        currentMount.removeChild(domElement);
+                    }
+                }
+                renderer.dispose();
+            }
+
+            // Clean up scene resources
+            if (scene) {
+                scene.traverse((object) => {
+                    if (object.geometry) {
+                        object.geometry.dispose();
+                    }
+                    if (object.material) {
+                        if (Array.isArray(object.material)) {
+                            object.material.forEach(material => material.dispose());
+                        } else {
+                            object.material.dispose();
+                        }
+                    }
+                });
+            }
+
+            // Clear all refs
+            sceneRef.current = null;
+            rendererRef.current = null;
+            cameraRef.current = null;
+            cubeLogicRef.current = null;
         };
+
+        // Initialize scene
+        initScene();
+
+        // Return cleanup function
+        return cleanup;
     }, [cubeSize, isInitialized]);
 
     // PUBLIC_INTERFACE - Define control functions first
@@ -521,17 +643,33 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
 
     // Update cube size
     useEffect(() => {
-        if (cubeLogicRef.current && isInitialized) {
-            // Clear existing cubelets
-            sceneRef.current.children = sceneRef.current.children.filter(child => 
-                !(child instanceof THREE.Mesh && child.geometry instanceof THREE.BoxGeometry)
+        if (cubeLogicRef.current && isInitialized && sceneRef.current) {
+            console.log(`Updating cube size to ${cubeSize}x${cubeSize}x${cubeSize}`);
+            
+            // Remove existing cubelets from scene
+            const cubeletsToRemove = sceneRef.current.children.filter(child => 
+                child instanceof THREE.Mesh && child.geometry instanceof THREE.BoxGeometry
             );
             
-            // Resize cube
+            cubeletsToRemove.forEach(cubelet => {
+                sceneRef.current.remove(cubelet);
+                if (cubelet.geometry) cubelet.geometry.dispose();
+                if (cubelet.material) {
+                    if (Array.isArray(cubelet.material)) {
+                        cubelet.material.forEach(mat => mat.dispose());
+                    } else {
+                        cubelet.material.dispose();
+                    }
+                }
+            });
+            
+            // Resize cube logic
             cubeLogicRef.current.resize(cubeSize);
             
-            // Add new cubelets
-            cubeLogicRef.current.getCubelets().forEach(cubelet => {
+            // Add new cubelets to scene
+            const newCubelets = cubeLogicRef.current.getCubelets();
+            console.log(`Adding ${newCubelets.length} new cubelets`);
+            newCubelets.forEach(cubelet => {
                 sceneRef.current.add(cubelet.mesh);
             });
         }
@@ -565,10 +703,50 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
                 width: '100%', 
                 height: '100%', 
                 minHeight: '500px',
-                position: 'relative'
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
             }}
         >
-            {debugMode && (
+            {isLoading && (
+                <div className="cube-loading">
+                    <div className="spinner"></div>
+                    <div>Loading Rubik's Cube...</div>
+                </div>
+            )}
+            
+            {error && (
+                <div style={{
+                    color: '#ff6b6b',
+                    textAlign: 'center',
+                    padding: '20px',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid #ff6b6b'
+                }}>
+                    <h3>Error Loading Cube</h3>
+                    <p>{error}</p>
+                    <button 
+                        onClick={() => {
+                            setError(null);
+                            setIsInitialized(false);
+                        }}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#ff6b6b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+            
+            {debugMode && isInitialized && (
                 <div style={{
                     position: 'absolute',
                     top: '10px',
@@ -585,6 +763,7 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
                     <div>Cubelets: {cubeSize ** 3}</div>
                     <div>Animation Speed: {animationSpeed}x</div>
                     <div>Move History: {onMoveHistoryChange ? 'Enabled' : 'Disabled'}</div>
+                    <div>Initialized: {isInitialized ? 'Yes' : 'No'}</div>
                 </div>
             )}
         </div>
