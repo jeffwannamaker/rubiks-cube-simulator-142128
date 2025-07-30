@@ -320,6 +320,13 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
     const rendererRef = useRef(null);
     const cameraRef = useRef(null);
     const cubeLogicRef = useRef(null);
+    const handlersRef = useRef({
+        handleResize: null,
+        onMouseDown: null,
+        onMouseMove: null,
+        onMouseUp: null,
+        onWheel: null
+    });
 
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -336,139 +343,134 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         setIsLoading(true);
         setError(null);
 
-        // Scene initialization function
-        const initScene = () => {
-            // Validate mount point
-            if (!currentMount.parentElement) {
-                console.warn('Mount element not in DOM, retrying...');
-                setTimeout(initScene, 100);
-                return;
-            };
-
-            const rect = currentMount.getBoundingClientRect();
-            if (rect.width === 0 || rect.height === 0) {
-                console.warn('Mount element has no dimensions, retrying...', rect);
-                setTimeout(initScene, 100);
-                return;
-            };
+        try {
+            // Scene initialization function
+            const initScene = () => {
+                // Validate mount point
+                if (!currentMount.parentElement) {
+                    console.warn('Mount element not in DOM, retrying...');
+                    setTimeout(initScene, 100);
+                    return;
+                }
 
                 const rect = currentMount.getBoundingClientRect();
                 if (rect.width === 0 || rect.height === 0) {
                     console.warn('Mount element has no dimensions, retrying...', rect);
-                    setTimeout(setupScene, 100);
+                    setTimeout(initScene, 100);
                     return;
                 }
 
                 console.log('Initializing Three.js scene with dimensions:', rect.width, 'x', rect.height);
 
-        // Scene setup
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
-        sceneRef.current = scene;
+                // Scene setup
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x1a1a1a);
+                sceneRef.current = scene;
 
-        // Camera setup
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            currentMount.clientWidth / currentMount.clientHeight,
-            0.1,
-            1000
-        );
-        camera.position.set(10, 10, 10);
-        camera.lookAt(0, 0, 0);
-        cameraRef.current = camera;
+                // Camera setup
+                const camera = new THREE.PerspectiveCamera(
+                    75,
+                    rect.width / rect.height,
+                    0.1,
+                    1000
+                );
+                camera.position.set(10, 10, 10);
+                camera.lookAt(0, 0, 0);
+                cameraRef.current = camera;
 
-        // Renderer setup
-        const renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
-            alpha: false,
-            preserveDrawingBuffer: false
-        });
-        renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        rendererRef.current = renderer;
+                // Renderer setup
+                const renderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    alpha: false,
+                    preserveDrawingBuffer: false
+                });
+                renderer.setSize(rect.width, rect.height);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                renderer.outputColorSpace = THREE.SRGBColorSpace;
+                rendererRef.current = renderer;
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 10, 5);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
-        scene.add(directionalLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                scene.add(directionalLight);
 
-        // Cube logic
-        cubeLogicRef.current = new RubiksCubeLogic(cubeSize);
-        
-        // Add cubelets to scene
-        const cubelets = cubeLogicRef.current.getCubelets();
-        console.log(`Adding ${cubelets.length} cubelets to scene`);
-        cubelets.forEach(cubelet => {
-            scene.add(cubelet.mesh);
-        });
+                // Cube logic
+                cubeLogicRef.current = new RubiksCubeLogic(cubeSize);
+                
+                // Add cubelets to scene
+                const cubelets = cubeLogicRef.current.getCubelets();
+                console.log(`Adding ${cubelets.length} cubelets to scene`);
+                cubelets.forEach(cubelet => {
+                    scene.add(cubelet.mesh);
+                });
 
-        // Controls (basic mouse interaction)
-        let isDragging = false;
-        let previousMousePosition = { x: 0, y: 0 };
+                // Controls (basic mouse interaction)
+                let isDragging = false;
+                let previousMousePosition = { x: 0, y: 0 };
 
-        const onMouseDown = (event) => {
-            event.preventDefault();
-            isDragging = true;
-            previousMousePosition = { x: event.clientX, y: event.clientY };
-        };
+                const toRadians = (angle) => angle * (Math.PI / 180);
 
-        const onMouseMove = (event) => {
-            if (!isDragging) return;
-            event.preventDefault();
+                // Define and store mouse event handlers
+                handlersRef.current.onMouseDown = (event) => {
+                    event.preventDefault();
+                    isDragging = true;
+                    previousMousePosition = { x: event.clientX, y: event.clientY };
+                };
 
-            const deltaMove = {
-                x: event.clientX - previousMousePosition.x,
-                y: event.clientY - previousMousePosition.y
-            };
+                handlersRef.current.onMouseMove = (event) => {
+                    if (!isDragging) return;
+                    event.preventDefault();
 
-            const deltaRotationQuaternion = new THREE.Quaternion()
-                .setFromEuler(new THREE.Euler(
-                    toRadians(deltaMove.y * 1),
-                    toRadians(deltaMove.x * 1),
-                    0,
-                    'XYZ'
-                ));
+                    const deltaMove = {
+                        x: event.clientX - previousMousePosition.x,
+                        y: event.clientY - previousMousePosition.y
+                    };
 
-            camera.position.applyQuaternion(deltaRotationQuaternion);
-            camera.lookAt(scene.position);
+                    const deltaRotationQuaternion = new THREE.Quaternion()
+                        .setFromEuler(new THREE.Euler(
+                            toRadians(deltaMove.y * 1),
+                            toRadians(deltaMove.x * 1),
+                            0,
+                            'XYZ'
+                        ));
 
-            previousMousePosition = { x: event.clientX, y: event.clientY };
-        };
+                    camera.position.applyQuaternion(deltaRotationQuaternion);
+                    camera.lookAt(scene.position);
 
-        const onMouseUp = (event) => {
-            event.preventDefault();
-            isDragging = false;
-        };
+                    previousMousePosition = { x: event.clientX, y: event.clientY };
+                };
 
-        const onWheel = (event) => {
-            event.preventDefault();
-            const delta = event.deltaY;
-            const scaleFactor = 1 + delta * 0.001;
-            camera.position.multiplyScalar(scaleFactor);
-        };
+                handlersRef.current.onMouseUp = (event) => {
+                    event.preventDefault();
+                    isDragging = false;
+                };
 
-        const toRadians = (angle) => angle * (Math.PI / 180);
+                handlersRef.current.onWheel = (event) => {
+                    event.preventDefault();
+                    const delta = event.deltaY;
+                    const scaleFactor = 1 + delta * 0.001;
+                    camera.position.multiplyScalar(scaleFactor);
+                };
 
-        // Add event listeners with proper options
-        renderer.domElement.addEventListener('mousedown', onMouseDown, { passive: false });
-        renderer.domElement.addEventListener('mousemove', onMouseMove, { passive: false });
-        renderer.domElement.addEventListener('mouseup', onMouseUp, { passive: false });
-        renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+                // Add event listeners with proper options
+                renderer.domElement.addEventListener('mousedown', handlersRef.current.onMouseDown, { passive: false });
+                renderer.domElement.addEventListener('mousemove', handlersRef.current.onMouseMove, { passive: false });
+                renderer.domElement.addEventListener('mouseup', handlersRef.current.onMouseUp, { passive: false });
+                renderer.domElement.addEventListener('wheel', handlersRef.current.onWheel, { passive: false });
 
-        // Prevent context menu on right click
-        renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+                // Prevent context menu on right click
+                renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Mount renderer
-        currentMount.appendChild(renderer.domElement);
+                // Mount renderer
+                currentMount.appendChild(renderer.domElement);
 
                 // Animation loop
                 const animate = () => {
@@ -480,7 +482,8 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
                 animate();
 
                 // Handle window resize
-                const handleResize = () => {
+                // Define and store resize handler
+                handlersRef.current.handleResize = () => {
                     if (!currentMount || !rendererRef.current || !cameraRef.current) return;
                     const width = currentMount.clientWidth;
                     const height = currentMount.clientHeight;
@@ -489,14 +492,14 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
                     rendererRef.current.setSize(width, height);
                 };
 
-                window.addEventListener('resize', handleResize);
-                
-                // Return true to indicate successful initialization
-                return true;
+                window.addEventListener('resize', handlersRef.current.handleResize);
 
-            console.log('Three.js scene initialized successfully');
-            setIsInitialized(true);
-            setIsLoading(false);
+                setIsInitialized(true);
+                setIsLoading(false);
+            };
+
+            // Initialize scene
+            initScene();
 
         } catch (err) {
             console.error('Failed to initialize Three.js scene:', err);
@@ -504,42 +507,48 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
             setIsLoading(false);
         }
 
+
+
         // Define cleanup function
-        const cleanup = () => {
+        return () => {
             // Stop animation
             if (animationId !== null) {
                 cancelAnimationFrame(animationId);
-                animationId = null;
             }
 
-            // Remove event listeners
-            window.removeEventListener('resize', handleResize);
+            // Remove event listeners using stored handlers
+            if (handlersRef.current.handleResize) {
+                window.removeEventListener('resize', handlersRef.current.handleResize);
+            }
 
-            // Get current refs for cleanup
-            const renderer = rendererRef.current;
-            const scene = sceneRef.current;
-
-            // Clean up renderer and event listeners
-            if (renderer) {
-                const domElement = renderer.domElement;
+            // Clean up renderer and scene
+            if (rendererRef.current) {
+                const domElement = rendererRef.current.domElement;
                 if (domElement) {
-                    domElement.removeEventListener('mousedown', onMouseDown);
-                    domElement.removeEventListener('mousemove', onMouseMove);
-                    domElement.removeEventListener('mouseup', onMouseUp);
-                    domElement.removeEventListener('wheel', onWheel);
+                    // Remove event listeners using stored handlers
+                    if (handlersRef.current.onMouseDown) {
+                        domElement.removeEventListener('mousedown', handlersRef.current.onMouseDown);
+                    }
+                    if (handlersRef.current.onMouseMove) {
+                        domElement.removeEventListener('mousemove', handlersRef.current.onMouseMove);
+                    }
+                    if (handlersRef.current.onMouseUp) {
+                        domElement.removeEventListener('mouseup', handlersRef.current.onMouseUp);
+                    }
+                    if (handlersRef.current.onWheel) {
+                        domElement.removeEventListener('wheel', handlersRef.current.onWheel);
+                    }
                     domElement.removeEventListener('contextmenu', (e) => e.preventDefault());
 
-                    // Remove from DOM
                     if (currentMount.contains(domElement)) {
                         currentMount.removeChild(domElement);
                     }
                 }
-                renderer.dispose();
+                rendererRef.current.dispose();
             }
 
-            // Clean up scene resources
-            if (scene) {
-                scene.traverse((object) => {
+            if (sceneRef.current) {
+                sceneRef.current.traverse((object) => {
                     if (object.geometry) {
                         object.geometry.dispose();
                     }
@@ -553,21 +562,15 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
                 });
             }
 
-            // Clear all refs
+            // Clear refs
             sceneRef.current = null;
             rendererRef.current = null;
             cameraRef.current = null;
             cubeLogicRef.current = null;
         };
-
-        // Initialize scene
-        initScene();
-
-        // Return cleanup function
-        return cleanup;
     }, [cubeSize, isInitialized]);
 
-    // PUBLIC_INTERFACE - Define control functions first
+    // Control function definitions
     const executeMove = useCallback((notation) => {
         if (cubeLogicRef.current) {
             cubeLogicRef.current.executeMove(notation);
@@ -577,7 +580,6 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         }
     }, [onMoveHistoryChange]);
 
-    // PUBLIC_INTERFACE
     const scramble = useCallback(() => {
         if (cubeLogicRef.current) {
             cubeLogicRef.current.scramble();
@@ -587,7 +589,6 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         }
     }, [onMoveHistoryChange]);
 
-    // PUBLIC_INTERFACE
     const solve = useCallback(() => {
         if (cubeLogicRef.current) {
             cubeLogicRef.current.solve();
@@ -597,7 +598,6 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         }
     }, [onMoveHistoryChange]);
 
-    // PUBLIC_INTERFACE
     const reset = useCallback(() => {
         if (cubeLogicRef.current) {
             cubeLogicRef.current.reset();
@@ -607,7 +607,6 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         }
     }, [onMoveHistoryChange]);
 
-    // PUBLIC_INTERFACE
     const undo = useCallback(() => {
         if (cubeLogicRef.current) {
             cubeLogicRef.current.undo();
@@ -617,7 +616,6 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         }
     }, [onMoveHistoryChange]);
 
-    // PUBLIC_INTERFACE
     const redo = useCallback(() => {
         if (cubeLogicRef.current) {
             cubeLogicRef.current.redo();
@@ -627,26 +625,26 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         }
     }, [onMoveHistoryChange]);
 
-    // Expose controls to parent component
+    // Expose controls to parent
     useEffect(() => {
         if (cubeLogicRef.current && onControlsReady) {
             onControlsReady({
-                executeMove: executeMove,
-                scramble: scramble,
-                solve: solve,
-                reset: reset,
-                undo: undo,
-                redo: redo
+                executeMove,
+                scramble,
+                solve,
+                reset,
+                undo,
+                redo
             });
         }
     }, [executeMove, scramble, solve, reset, undo, redo, onControlsReady]);
 
-    // Update cube size
+    // Handle cube size updates
     useEffect(() => {
         if (cubeLogicRef.current && isInitialized && sceneRef.current) {
             console.log(`Updating cube size to ${cubeSize}x${cubeSize}x${cubeSize}`);
             
-            // Remove existing cubelets from scene
+            // Remove existing cubelets
             const cubeletsToRemove = sceneRef.current.children.filter(child => 
                 child instanceof THREE.Mesh && child.geometry instanceof THREE.BoxGeometry
             );
@@ -663,10 +661,8 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
                 }
             });
             
-            // Resize cube logic
+            // Create new cubelets
             cubeLogicRef.current.resize(cubeSize);
-            
-            // Add new cubelets to scene
             const newCubelets = cubeLogicRef.current.getCubelets();
             console.log(`Adding ${newCubelets.length} new cubelets`);
             newCubelets.forEach(cubelet => {
@@ -675,21 +671,18 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
         }
     }, [cubeSize, isInitialized]);
 
-    // Add debug helpers when debug mode is enabled
+    // Debug mode handlers
     useEffect(() => {
         if (!sceneRef.current || !cubeLogicRef.current) return;
 
-        // Remove existing debug helpers
         const debugHelpers = sceneRef.current.children.filter(child => child.userData.isDebugHelper);
         debugHelpers.forEach(helper => sceneRef.current.remove(helper));
 
         if (debugMode) {
-            // Add coordinate axes
             const axesHelper = new THREE.AxesHelper(5);
             axesHelper.userData.isDebugHelper = true;
             sceneRef.current.add(axesHelper);
 
-            // Add grid
             const gridHelper = new THREE.GridHelper(10, 10);
             gridHelper.userData.isDebugHelper = true;
             sceneRef.current.add(gridHelper);
