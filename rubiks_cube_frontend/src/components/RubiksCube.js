@@ -24,7 +24,16 @@ class Cubelet {
             0x0000ff  // Back - Blue
         ];
         
-        const materials = colors.map(color => new THREE.MeshLambertMaterial({ color }));
+        const materials = colors.map(color => 
+            new THREE.MeshPhongMaterial({ 
+                color,
+                shininess: 30,
+                specular: 0x333333,
+                flatShading: false,
+                castShadow: true,
+                receiveShadow: true
+            })
+        );
         this.mesh = new THREE.Mesh(geometry, materials);
         
         // Position the cubelet
@@ -364,43 +373,63 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
 
                 // Scene setup
                 const scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x1a1a1a);
+                scene.background = new THREE.Color(0x2d2d2d); // Lighter background
                 sceneRef.current = scene;
 
+                // Add an invisible ground plane to help with shadows
+                const groundGeometry = new THREE.PlaneGeometry(20, 20);
+                const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+                const groundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+                groundPlane.rotation.x = -Math.PI / 2;
+                groundPlane.position.y = -5;
+                groundPlane.receiveShadow = true;
+                scene.add(groundPlane);
+
                 // Camera setup
+                // Camera setup with better initial position
                 const camera = new THREE.PerspectiveCamera(
-                    75,
+                    45, // Narrower FOV for better depth perception
                     rect.width / rect.height,
                     0.1,
                     1000
                 );
-                camera.position.set(10, 10, 10);
+                camera.position.set(5, 5, 7); // Closer initial position
                 camera.lookAt(0, 0, 0);
                 cameraRef.current = camera;
 
-                // Renderer setup
+                // Enhanced renderer setup
                 const renderer = new THREE.WebGLRenderer({ 
                     antialias: true,
-                    alpha: false,
-                    preserveDrawingBuffer: false
+                    alpha: true, // Enable transparency
+                    preserveDrawingBuffer: true, // Better for debugging
                 });
                 renderer.setSize(rect.width, rect.height);
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 renderer.outputColorSpace = THREE.SRGBColorSpace;
+                renderer.setClearColor(0x2d2d2d, 1); // Lighter background for better contrast
                 rendererRef.current = renderer;
 
-                // Lighting
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                // Enhanced lighting setup
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Increased ambient intensity
                 scene.add(ambientLight);
 
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                directionalLight.position.set(10, 10, 5);
-                directionalLight.castShadow = true;
-                directionalLight.shadow.mapSize.width = 2048;
-                directionalLight.shadow.mapSize.height = 2048;
-                scene.add(directionalLight);
+                // Key light
+                const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                mainLight.position.set(5, 5, 5);
+                mainLight.castShadow = true;
+                mainLight.shadow.mapSize.width = 2048;
+                mainLight.shadow.mapSize.height = 2048;
+                mainLight.shadow.camera.near = 0.1;
+                mainLight.shadow.camera.far = 100;
+                mainLight.shadow.bias = -0.001;
+                scene.add(mainLight);
+
+                // Fill light
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                fillLight.position.set(-5, 5, -5);
+                scene.add(fillLight);
 
                 // Cube logic
                 cubeLogicRef.current = new RubiksCubeLogic(cubeSize);
@@ -476,6 +505,17 @@ const RubiksCube = ({ cubeSize = 3, onMoveHistoryChange, debugMode = false, anim
                 const animate = () => {
                     animationId = requestAnimationFrame(animate);
                     if (rendererRef.current && cameraRef.current && sceneRef.current) {
+                        if (debugMode) {
+                            console.log('Rendering frame:', {
+                                cubelets: sceneRef.current.children.filter(child => 
+                                    child instanceof THREE.Mesh && child.geometry instanceof THREE.BoxGeometry
+                                ).length,
+                                camera: {
+                                    position: cameraRef.current.position,
+                                    rotation: cameraRef.current.rotation
+                                }
+                            });
+                        }
                         rendererRef.current.render(sceneRef.current, cameraRef.current);
                     }
                 };
